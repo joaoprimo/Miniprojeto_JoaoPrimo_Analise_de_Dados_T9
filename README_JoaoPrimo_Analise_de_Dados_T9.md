@@ -6,7 +6,8 @@ Opção A: VS Code (ou terminal)
 
 1. A base já está em `dados/Base_Varejo.zip` (não precisa descompactar). Fonte: <https://www.kaggle.com/datasets/namespaiva/base-varejo/data>
 2. Instale as bibliotecas: `pip install -r requirements.txt`
-3. Rode: `python analise_varejo.py`
+3. Rode:
+    `python analise_varejo.py`
 
 Opção B: Google Colab
 
