@@ -1,0 +1,15 @@
+# Base original do Kaggle (~49 MB descompactada; cada pessoa baixa a sua).
+dados/*.csv
+dados/*.zip
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# Sistema operacional / editor
+.DS_Store
+Thumbs.db
+.vscode/
