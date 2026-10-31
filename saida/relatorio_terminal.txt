@@ -1,0 +1,284 @@
+
+==============================================================================
+SPRINT 1 - IMPORTAÇÃO DA BASE (csv.DictReader -> pandas)
+==============================================================================
+Arquivo da base: /home/claude/t6/dados/Base_Varejo.csv
+Aviso: 'Base_Varejo.csv' é um .zip; lendo 'Base Varejo.csv' de dentro dele.
+Número de registros (linhas): 830.000
+Colunas no arquivo: 14 (10 com nome + 4 sem nome)
+Colunas carregadas: DATA, CO_ID, CL_ID, CL_GENERO, CL_EC, CL_FHL, CL_SEG, PR_ID, PR_CAT, PR_NOME
+
+Tipos de dados logo após a leitura (tudo texto):
+DATA         str
+CO_ID        str
+CL_ID        str
+CL_GENERO    str
+CL_EC        str
+CL_FHL       str
+CL_SEG       str
+PR_ID        str
+PR_CAT       str
+PR_NOME      str
+
+Primeiras 5 linhas:
+         DATA CO_ID CL_ID CL_GENERO CL_EC CL_FHL CL_SEG PR_ID     PR_CAT               PR_NOME
+0  01/02/2019  1000   534         M     4      1      C    67    BEBIDAS  REFRIGERANTE GUARANA
+1  01/02/2019  1000   534         M     4      1      C    70    BEBIDAS   REFRIGERANTE OUTROS
+2  01/02/2019  1000   534         M     4      1      C   178    HIGIENE       LENCO UMEDECIDO
+3  01/02/2019  1000   534         M     4      1      C     4  ALIMENTOS               ABACAXI
+4  01/02/2019  1000   534         M     4      1      C   175    LIMPEZA     LIMPADOR MULTIUSO
+
+==============================================================================
+SPRINT 2 - FUNÇÕES DE LIMPEZA (demonstração)
+==============================================================================
+  limpar_texto('  refrigerante   limaO ')  -> 'REFRIGERANTE LIMAO'
+  limpar_texto('Limão')                    -> 'LIMAO'
+  eh_nulo('#N/D')                          -> True
+  limpar_inteiro(' 1.234 ')                -> 1234
+  limpar_inteiro('abc')                    -> None
+  limpar_decimal('R$ 1.234,56')            -> 1234.56
+  converter_data('19/08/2022')             -> datetime.datetime(2022, 8, 19, 0, 0)
+  converter_data('31/02/2022')             -> None
+
+==============================================================================
+SPRINT 3 - DIAGNÓSTICO DE QUALIDADE (dados brutos)
+==============================================================================
+1) Valores nulos por coluna:
+              vazios marcador_erro total_nulos     pct
+coluna                                                
+DATA               0             0           0    0,00
+CO_ID              0             0           0    0,00
+CL_ID              0             0           0    0,00
+CL_GENERO          0             0           0    0,00
+CL_EC              0             0           0    0,00
+CL_FHL             0             0           0    0,00
+CL_SEG             0             0           0    0,00
+PR_ID              0             0           0    0,00
+PR_CAT             0         3.650       3.650    0,44
+PR_NOME            0         3.650       3.650    0,44
+SEM_NOME_11  830.000             0     830.000  100,00
+SEM_NOME_12  830.000             0     830.000  100,00
+SEM_NOME_13  830.000             0     830.000  100,00
+SEM_NOME_14  830.000             0     830.000  100,00
+
+2) Duplicatas (linhas 100% iguais a outra):
+  [PROBLEMA] linhas duplicadas: 96.553 (11,63% da base)
+
+3) Inconsistências e regras de negócio:
+  [OK]       datas inválidas (fora de dd/mm/aaaa): 0
+  [OK]       datas no futuro: 0 | período: 04/01/2019 a 08/12/2022
+  [PROBLEMA] categorias vazias ou com erro (#N/D): 3.650
+  [PROBLEMA] nomes de produto vazios ou com erro (#N/D): 3.650
+  [PROBLEMA] textos fora do padrão (caixa/espaços/acento): 7.320 ex.: ['REFRIGERANTE LIMaO']
+  [OK]       gênero fora de M/F: 0
+  [OK]       segmento fora de A/B/C: 0
+  [OK]       número de filhos inválido (não numérico ou fora de 0 a 20): 0
+  [OK]       CO_ID ligado a mais de 1 cliente ou data (regra da compra): 0 | 18.471 compras distintas
+  [OK]       clientes com atributos conflitantes (gênero/EC/filhos/segmento): 0 | 1.000 clientes
+  [OK]       PR_ID com mais de 1 nome ou categoria: 0 | 229 produtos (PR_ID)
+
+==============================================================================
+SPRINT 3 - LIMPEZA DA BASE
+==============================================================================
+ETAPA 1 - Nulos e padronização de texto
+  - 4 colunas sem nome e 100% vazias foram descartadas na leitura.
+  - PR_CAT vazio/#N/D -> 'Sem Categoria': 3.650 linhas
+  - PR_NOME vazio/#N/D -> 'Sem Nome': 3.650 linhas
+    Escolha: manter a linha e rotular, porque o item foi vendido de verdade;
+    apagar distorceria o volume por categoria e por compra. Não há como adivinhar a
+    categoria correta (PR_ID afetado(s): 107), então imputar a moda
+    seria inventar informação.
+  - Linhas removidas por chave/atributo nulo sem como imputar: 0
+
+ETAPA 2 - Duplicatas
+  - Linhas duplicadas eliminadas: 96.553 (11,63% da base), em 14.566 compras
+  - Nova coluna QTD = quantas vezes cada linha aparecia (nenhum item é perdido:
+    soma de QTD = 830.000; maior QTD em uma linha = 6).
+    Hipótese: repetição dentro da mesma compra = mais de uma unidade do produto.
+
+ETAPA 3 - Ajuste de tipos
+  - Linhas com data/número em formato inválido removidas: 0
+  - DATA convertida para datetime64 (datetime.strptime, formato dd/mm/aaaa).
+  - IDs, estado civil e filhos convertidos para inteiros; texto para category.
+  - Colunas criadas: ANO, MES, ANO_MES.
+
+Conferência: 0 nulos no df limpo e soma de QTD bate com as linhas lidas menos as removidas.
+Antes: 830.000 linhas x 14 colunas   |   Depois: 733.447 linhas x 14 colunas
+
+Tipos de dados do df limpo:
+DATA         datetime64[us]
+ANO                   int16
+MES                    int8
+ANO_MES                 str
+CO_ID                 int32
+CL_ID                 int32
+CL_GENERO          category
+CL_EC                  int8
+CL_FHL                 int8
+CL_SEG             category
+PR_ID                 int32
+PR_CAT             category
+PR_NOME            category
+QTD                   int16
+
+==============================================================================
+SPRINT 4 - ESTATÍSTICA DESCRITIVA: NÚMERO DE FILHOS DO CLIENTE (CL_FHL)
+==============================================================================
+
+POR CLIENTE (1 linha por CL_ID) - visão principal
+  contagem             1.000
+  média                1,136
+  mediana              0,000
+  desvio padrão        1,413
+  moda                     0
+  mínimo                   0
+  q1 (25%)             0,000
+  q2 (50%)             0,000
+  q3 (75%)             2,000
+  máximo                   4
+
+POR COMPRA (1 linha por CO_ID) - comparação
+  contagem            18.471
+  média                1,143
+  mediana              0,000
+  desvio padrão        1,418
+  moda                     0
+  mínimo                   0
+  q1 (25%)             0,000
+  q2 (50%)             0,000
+  q3 (75%)             2,000
+  máximo                   4
+
+(conferido com Series.describe() do pandas: média e mediana batem)
+
+Distribuição de clientes por número de filhos:
+       clientes    pct
+CL_FHL                
+0           527  52,70
+1           125  12,50
+2           130  13,00
+3           121  12,10
+4            97   9,70
+
+==============================================================================
+SPRINT 5 - AGRUPAMENTOS (groupby / pivot_table)
+==============================================================================
+1) Por gênero do cliente:
+             itens compras clientes itens_por_compra pct_itens
+CL_GENERO                                                     
+F          432.576   9.615      519            44,99     52,12
+M          397.424   8.856      481            44,88     47,88
+
+2) Por categoria do produto:
+                 itens compras pct_itens penetracao_compras
+PR_CAT                                                     
+ALIMENTOS      434.767  18.267     52,38              98,90
+HIGIENE        155.574  17.610     18,74              95,34
+LIMPEZA        145.754  17.475     17,56              94,61
+BEBIDAS         43.299  14.735      5,22              79,77
+PET             32.399  13.495      3,90              73,06
+ACESSORIOS      14.557   9.224      1,75              49,94
+Sem Categoria    3.650   3.228      0,44              17,48
+
+3) Gênero x categoria (pivot_table) - % dos itens de cada gênero:
+PR_CAT    ACESSORIOS ALIMENTOS BEBIDAS HIGIENE LIMPEZA   PET Sem Categoria
+CL_GENERO                                                                 
+F               1,78     52,38    5,17   18,72   17,64  3,87          0,44
+M               1,73     52,39    5,27   18,77   17,48  3,94          0,44
+
+4) Evolução por ano (2022 vai só até 08/12/2022):
+        itens compras clientes_ativos
+ANO                                  
+2019  199.036   4.483             986
+2020  218.367   4.794             990
+2021  245.259   5.505             995
+2022  167.338   3.689             975
+
+   Compras por ano x mês (pivot_table):
+MES    1    2    3    4    5    6    7    8    9    10   11   12
+ANO                                                             
+2019  171  402  257  410  711  493  274  420  436  242  151  516
+2020  506  434  439  387  366  264  215  384  471  633  384  311
+2021  616  433  382  363  333  445  599  386  594  711  231  412
+2022  566  430  364  318  429  301  446  273   35   59  155  313
+
+5) Por número de filhos do cliente:
+       clientes compras    itens itens_por_compra compras_por_cliente
+CL_FHL                                                               
+0           527   9.735  435.501            44,74               18,47
+1           125   2.250  102.813            45,69               18,00
+2           130   2.394  106.622            44,54               18,42
+3           121   2.289  104.685            45,73               18,92
+4            97   1.803   80.379            44,58               18,59
+
+   Produtos infantis (FRALDA, CHUPETA, MORDEDOR, PAPINHA INFANTIL):
+   52,7% dos itens foram comprados por clientes SEM filhos,
+   que são 52,7% dos clientes.
+
+6) Por segmento do cliente (CL_SEG):
+       clientes compras    itens itens_por_compra compras_por_cliente
+CL_SEG                                                               
+A            84   1.492   67.736            45,40               17,76
+B           645  11.843  530.163            44,77               18,36
+C           271   5.136  232.101            45,19               18,95
+
+7) Top 5 produtos por nome (ids_distintos = quantos PR_ID usam o mesmo nome):
+                  itens ids_distintos
+PR_NOME                              
+PRESUNTO COZIDO  14.381             4
+SARDINHA          7.490             2
+GEL               7.399             2
+BANANA            7.385             2
+DESENGORDURANTE   7.378             2
+
+   Top 5 clientes por itens comprados:
+       itens compras
+CL_ID               
+822    1.777      33
+485    1.647      31
+369    1.531      28
+397    1.509      30
+971    1.497      28
+   Os 10% maiores clientes respondem por 15,1% dos itens.
+
+Gráficos salvos em saída/: grafico_categorias.png, grafico_compras_mes.png, grafico_filhos.png
+
+==============================================================================
+RELATÓRIO FINAL - CONTADORES
+==============================================================================
+  Registros lidos                                         830.000
+  Colunas sem nome e vazias descartadas                         4
+  Categorias vazias/#N/D -> 'Sem Categoria'                 3.650
+  Nomes vazios/#N/D -> 'Sem Nome'                           3.650
+  Linhas removidas por nulo sem imputação                       0
+  Linhas duplicadas eliminadas (viraram QTD)               96.553
+  Linhas removidas por formato inválido                         0
+  Linhas do df limpo (itens distintos por compra)         733.447
+  Itens vendidos (soma de QTD)                            830.000
+  Compras (CO_ID)                                          18.471
+  Clientes (CL_ID)                                          1.000
+  Produtos (PR_ID)                                            229
+  Categorias (PR_CAT)                                           7
+  Período                                              04/01/2019 a 08/12/2022
+
+==============================================================================
+CONCLUSÕES (principais insights e problemas remanescentes)
+==============================================================================
+1) Alimentos dominam: ALIMENTOS é 52,4% dos itens e está em 98,9% das compras; higiene e limpeza vêm a seguir (18,7% e 17,6%). As 7 categorias incluem 'Sem Categoria' (0,44% dos itens; PR_ID: 107).
+
+2) Gênero: clientes do gênero F respondem por 52,1% dos itens (519 dos 1000 clientes). O tamanho médio da compra é praticamente igual (44,9 x 45,0 itens) e o mix de categorias difere no máximo 0,16 ponto percentual entre os gêneros: a diferença de volume vem do número de clientes de cada gênero, não de comprarem diferente.
+
+3) Tempo: 2021 foi o ano de maior volume (245.259 itens) e o mês de pico foi 10/2021 (32.327 itens). Meses com volume anormalmente baixo (menos de 25% da mediana mensal de 386 compras): 09/2022 (35 compras), 10/2022 (59 compras); é indício de falha de coleta, e não de queda real de vendas. O último mês (12/2022) é parcial: os dados terminam em 08/12/2022.
+
+4) Número de filhos (por cliente): média 1,14, mediana 0, moda 0, desvio padrão 1,41, mínimo 0 e máximo 4; Q1=0, Q3=2. 52,7% dos clientes não têm filhos (média > mediana: distribuição assimétrica à direita).
+
+5) Filhos não explicam o comportamento de compra: 52,7% dos itens infantis (fralda, chupeta etc.) são comprados por clientes SEM filhos, quase exatamente a fração de clientes sem filhos (52,7%). Os itens por compra variam só de 44,5 a 45,7 entre os grupos de filhos e os 10% maiores clientes respondem por 15,1% dos itens. Essa uniformidade sugere base sintética ou sorteada, o que limita conclusões de negócio (é uma hipótese, não uma prova).
+
+6) Problemas remanescentes: (a) sem preço/quantidade, 'vendas' é só volume de itens e QTD depende da hipótese de que linha repetida = unidade extra; (b) 228 PR_ID com nome para 117 nomes distintos (ex.: PRESUNTO COZIDO tem 4 IDs), então ranking por nome mistura SKUs; (c) CL_EC não tem legenda; (d) PR_ID sem categoria/nome: 107; (e) meses com volume anormalmente baixo: 09/2022 (35 compras), 10/2022 (59 compras).
+
+
+==============================================================================
+SPRINT 6 - SAÍDAS GRAVADAS
+==============================================================================
+df_limpo.csv gravado e conferido: 733.447 linhas x 11 colunas (39,0 MB) em /home/claude/t6/saida/df_limpo.csv
+Relatório do terminal gravado em /home/claude/t6/saida/relatorio_terminal.txt
