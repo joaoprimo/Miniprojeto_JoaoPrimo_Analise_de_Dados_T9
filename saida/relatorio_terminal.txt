@@ -2,7 +2,7 @@
 ==============================================================================
 SPRINT 1 - IMPORTAÇÃO DA BASE (csv.DictReader -> pandas)
 ==============================================================================
-Arquivo da base: /home/claude/t6/dados/Base_Varejo.csv
+Arquivo da base: dados/Base_Varejo.csv
 Aviso: 'Base_Varejo.csv' é um .zip; lendo 'Base Varejo.csv' de dentro dele.
 Número de registros (linhas): 830.000
 Colunas no arquivo: 14 (10 com nome + 4 sem nome)
@@ -280,5 +280,5 @@ CONCLUSÕES (principais insights e problemas remanescentes)
 ==============================================================================
 SPRINT 6 - SAÍDAS GRAVADAS
 ==============================================================================
-df_limpo.csv gravado e conferido: 733.447 linhas x 11 colunas (39,0 MB) em /home/claude/t6/saida/df_limpo.csv
-Relatório do terminal gravado em /home/claude/t6/saida/relatorio_terminal.txt
+df_limpo.csv gravado e conferido: 733.447 linhas x 11 colunas (39,0 MB) em saida/df_limpo.csv
+Relatório do terminal gravado em saida/relatorio_terminal.txt

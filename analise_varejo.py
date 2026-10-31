@@ -167,7 +167,7 @@ def etapa_importacao():
     """Sprint 1: importa a base e mostra registros, colunas e tipos de dados."""
     titulo("SPRINT 1 - IMPORTAÇÃO DA BASE (csv.DictReader -> pandas)")
     caminho = localizar_base()
-    imprimir(f"Arquivo da base: {caminho}")
+    imprimir(f"Arquivo da base: {caminho.relative_to(PASTA_PROJETO) if PASTA_PROJETO in caminho.parents else caminho.name}")
 
     registros, cabecalho, extras = ler_base_dictreader(caminho)
     df = pd.DataFrame(registros)  # tudo chega como texto; os tipos são ajustados no Sprint 3
@@ -773,10 +773,10 @@ def salvar_saidas(df):
     assert conferencia.shape == df_saida.shape, "o arquivo gravado não bate com o df em memória"
     tamanho_mb = caminho_csv.stat().st_size / 1024 / 1024
     imprimir(f"df_limpo.csv gravado e conferido: {br(len(df_saida))} linhas x {df_saida.shape[1]} colunas "
-             f"({br(tamanho_mb, 1)} MB) em {caminho_csv}")
+             f"({br(tamanho_mb, 1)} MB) em saida/df_limpo.csv")
 
     caminho_txt = PASTA_SAIDA / "relatorio_terminal.txt"
-    imprimir(f"Relatório do terminal gravado em {caminho_txt}")
+    imprimir("Relatório do terminal gravado em saida/relatorio_terminal.txt")
     caminho_txt.write_text("\n".join(LINHAS_RELATORIO), encoding="utf-8")
 
 
