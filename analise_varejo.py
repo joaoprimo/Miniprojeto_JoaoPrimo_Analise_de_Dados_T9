@@ -520,6 +520,243 @@ def estatisticas_filhos(df):
 
 
 # ----------------------------------------------------------------------------
+# SPRINT 5 - AGRUPAMENTOS, GRÁFICOS, CONCLUSÕES E RELATÓRIO FINAL
+# ----------------------------------------------------------------------------
+PRODUTOS_INFANTIS = ["FRALDA", "CHUPETA", "MORDEDOR", "PAPINHA INFANTIL"]
+
+
+def agrupamentos(df):
+    """Explora padrões com groupby() e pivot_table(). 'itens' = soma de QTD."""
+    titulo("SPRINT 5 - AGRUPAMENTOS (groupby / pivot_table)")
+    r = {}
+    total_compras = df["CO_ID"].nunique()
+
+    # 1) Gênero: quem compra mais?
+    genero = df.groupby("CL_GENERO", observed=True).agg(
+        itens=("QTD", "sum"), compras=("CO_ID", "nunique"), clientes=("CL_ID", "nunique"))
+    genero["itens_por_compra"] = genero["itens"] / genero["compras"]
+    genero["pct_itens"] = genero["itens"] / genero["itens"].sum() * 100
+    imprimir("1) Por gênero do cliente:")
+    imprimir(fmt_df(genero))
+    r["genero"] = genero
+
+    # 2) Categoria: o que mais vende? (penetração = % das compras que levam a categoria)
+    categoria = df.groupby("PR_CAT", observed=True).agg(
+        itens=("QTD", "sum"), compras=("CO_ID", "nunique"))
+    categoria["pct_itens"] = categoria["itens"] / categoria["itens"].sum() * 100
+    categoria["penetracao_compras"] = categoria["compras"] / total_compras * 100
+    categoria = categoria.sort_values("itens", ascending=False)
+    imprimir("\n2) Por categoria do produto:")
+    imprimir(fmt_df(categoria))
+    r["categoria"] = categoria
+
+    # 3) Gênero x categoria (pivot_table): % de itens de cada categoria dentro do gênero
+    cruzado = df.pivot_table(index="CL_GENERO", columns="PR_CAT", values="QTD",
+                             aggfunc="sum", observed=True)
+    cruzado = cruzado.div(cruzado.sum(axis=1), axis=0) * 100
+    imprimir("\n3) Gênero x categoria (pivot_table) - % dos itens de cada gênero:")
+    imprimir(fmt_df(cruzado))
+    r["genero_categoria"] = cruzado
+    r["mix_dif_max"] = float((cruzado.max() - cruzado.min()).max())  # maior diferença, em p.p.
+
+    # 4) Evolução no tempo
+    ano = df.groupby("ANO").agg(itens=("QTD", "sum"), compras=("CO_ID", "nunique"),
+                                clientes_ativos=("CL_ID", "nunique"))
+    imprimir("\n4) Evolução por ano (2022 vai só até 08/12/2022):")
+    imprimir(fmt_df(ano))
+    compras_mes = df.pivot_table(index="ANO", columns="MES", values="CO_ID",
+                                 aggfunc="nunique", observed=True)
+    imprimir("\n   Compras por ano x mês (pivot_table):")
+    imprimir(fmt_df(compras_mes))
+    itens_mes = df.groupby("ANO_MES")["QTD"].sum()
+    r["ano"], r["compras_mes"], r["itens_mes"] = ano, compras_mes, itens_mes
+
+    # 5) Número de filhos x comportamento de compra
+    filhos = df.groupby("CL_FHL", observed=True).agg(
+        clientes=("CL_ID", "nunique"), compras=("CO_ID", "nunique"), itens=("QTD", "sum"))
+    filhos["itens_por_compra"] = filhos["itens"] / filhos["compras"]
+    filhos["compras_por_cliente"] = filhos["compras"] / filhos["clientes"]
+    imprimir("\n5) Por número de filhos do cliente:")
+    imprimir(fmt_df(filhos))
+    r["filhos"] = filhos
+    r["ipc_filhos"] = (float(filhos["itens_por_compra"].min()), float(filhos["itens_por_compra"].max()))
+
+    # 5b) Quem compra produtos infantis? Clientes com filhos deveriam concentrar esses itens.
+    infantis = df[df["PR_NOME"].isin(PRODUTOS_INFANTIS)]
+    itens_inf_sem_filhos = int(infantis.loc[infantis["CL_FHL"] == 0, "QTD"].sum())
+    total_infantis = int(infantis["QTD"].sum())
+    r["pct_infantis_sem_filhos"] = itens_inf_sem_filhos / total_infantis * 100 if total_infantis else float("nan")
+    clientes_unicos = df.drop_duplicates("CL_ID")
+    r["pct_clientes_sem_filhos"] = (clientes_unicos["CL_FHL"] == 0).mean() * 100
+    imprimir(f"\n   Produtos infantis ({', '.join(PRODUTOS_INFANTIS)}):")
+    imprimir(f"   {br(r['pct_infantis_sem_filhos'], 1)}% dos itens foram comprados por clientes SEM filhos,")
+    imprimir(f"   que são {br(r['pct_clientes_sem_filhos'], 1)}% dos clientes.")
+
+    # 6) Segmento
+    segmento = df.groupby("CL_SEG", observed=True).agg(
+        clientes=("CL_ID", "nunique"), compras=("CO_ID", "nunique"), itens=("QTD", "sum"))
+    segmento["itens_por_compra"] = segmento["itens"] / segmento["compras"]
+    segmento["compras_por_cliente"] = segmento["compras"] / segmento["clientes"]
+    imprimir("\n6) Por segmento do cliente (CL_SEG):")
+    imprimir(fmt_df(segmento))
+    r["segmento"] = segmento
+
+    # 7) Produtos e clientes de destaque
+    por_nome = df[df["PR_NOME"] != "Sem Nome"].groupby("PR_NOME", observed=True).agg(
+        itens=("QTD", "sum"), ids_distintos=("PR_ID", "nunique"))
+    top_produtos = por_nome.sort_values("itens", ascending=False).head(5)
+    imprimir("\n7) Top 5 produtos por nome (ids_distintos = quantos PR_ID usam o mesmo nome):")
+    imprimir(fmt_df(top_produtos))
+    por_cliente = df.groupby("CL_ID").agg(itens=("QTD", "sum"), compras=("CO_ID", "nunique"))
+    por_cliente = por_cliente.sort_values("itens", ascending=False)
+    top10_pct = por_cliente["itens"].head(len(por_cliente) // 10).sum() / por_cliente["itens"].sum() * 100
+    imprimir("\n   Top 5 clientes por itens comprados:")
+    imprimir(fmt_df(por_cliente.head(5)))
+    imprimir(f"   Os 10% maiores clientes respondem por {br(top10_pct, 1)}% dos itens.")
+    r["top_produtos"], r["top_clientes"], r["top10_pct"] = top_produtos, por_cliente, top10_pct
+    r["por_nome"] = por_nome
+    r["total_compras"] = total_compras
+    return r
+
+
+def gerar_graficos(df, estat):
+    """Salva 3 gráficos simples em saída/ (só se o matplotlib estiver instalado)."""
+    try:
+        import matplotlib
+        matplotlib.use("Agg")  # não abre janela; apenas grava o arquivo
+        import matplotlib.pyplot as plt
+    except ImportError:
+        imprimir("\n(matplotlib não instalado: gráficos ignorados. pip install matplotlib)")
+        return []
+    PASTA_SAIDA.mkdir(exist_ok=True)
+    arquivos = []
+
+    itens_cat = df.groupby("PR_CAT", observed=True)["QTD"].sum().sort_values()
+    fig, eixo = plt.subplots(figsize=(8, 4))
+    eixo.barh(itens_cat.index.astype(str), itens_cat.values / 1000, color="#2a6f97")
+    eixo.set_title("Itens vendidos por categoria")
+    eixo.set_xlabel("Itens (em milhares)")
+    fig.tight_layout()
+    fig.savefig(PASTA_SAIDA / "grafico_categorias.png", dpi=110)
+    plt.close(fig)
+    arquivos.append("grafico_categorias.png")
+
+    compras_mes = df.groupby("ANO_MES")["CO_ID"].nunique()
+    fig, eixo = plt.subplots(figsize=(10, 4))
+    eixo.plot(compras_mes.index, compras_mes.values, color="#c1121f", marker="o", markersize=3)
+    eixo.set_xticks(range(0, len(compras_mes), 3))
+    eixo.set_xticklabels(compras_mes.index[::3], rotation=60, fontsize=8)
+    eixo.set_title("Compras por mês")
+    eixo.set_ylabel("Compras (CO_ID distintos)")
+    fig.tight_layout()
+    fig.savefig(PASTA_SAIDA / "grafico_compras_mes.png", dpi=110)
+    plt.close(fig)
+    arquivos.append("grafico_compras_mes.png")
+
+    dist = estat["distribuicao"]
+    fig, eixo = plt.subplots(figsize=(6, 4))
+    eixo.bar(dist.index.astype(str), dist["clientes"], color="#588157")
+    eixo.set_title("Clientes por número de filhos")
+    eixo.set_xlabel("Número de filhos")
+    eixo.set_ylabel("Clientes")
+    fig.tight_layout()
+    fig.savefig(PASTA_SAIDA / "grafico_filhos.png", dpi=110)
+    plt.close(fig)
+    arquivos.append("grafico_filhos.png")
+
+    imprimir(f"\nGráficos salvos em saída/: {', '.join(arquivos)}")
+    return arquivos
+
+
+def relatorio_final(df, c, estat, r):
+    """Contadores finais + bloco de conclusões (6 tópicos), tudo calculado a partir dos dados."""
+    titulo("RELATÓRIO FINAL - CONTADORES")
+    clientes_uni = df["CL_ID"].nunique()
+    contadores = [
+        ("Registros lidos", c["linhas_lidas"]),
+        ("Colunas sem nome e vazias descartadas", c["colunas_vazias_removidas"]),
+        ("Categorias vazias/#N/D -> 'Sem Categoria'", c["categorias_preenchidas"]),
+        ("Nomes vazios/#N/D -> 'Sem Nome'", c["nomes_preenchidos"]),
+        ("Linhas removidas por nulo sem imputação", c["removidas_por_nulo"]),
+        ("Linhas duplicadas eliminadas (viraram QTD)", c["duplicadas_removidas"]),
+        ("Linhas removidas por formato inválido", c["removidas_por_formato"]),
+        ("Linhas do df limpo (itens distintos por compra)", len(df)),
+        ("Itens vendidos (soma de QTD)", c["itens_totais"]),
+        ("Compras (CO_ID)", r["total_compras"]),
+        ("Clientes (CL_ID)", clientes_uni),
+        ("Produtos (PR_ID)", df["PR_ID"].nunique()),
+        ("Categorias (PR_CAT)", df["PR_CAT"].nunique()),
+    ]
+    for rotulo, valor in contadores:
+        imprimir(f"  {rotulo:<52} {br(valor):>10}")
+    imprimir(f"  {'Período':<52} {df['DATA'].min():%d/%m/%Y} a {df['DATA'].max():%d/%m/%Y}")
+
+    # ---- números usados nas conclusões ----
+    cat = r["categoria"]
+    gen = r["genero"]
+    mes = r["itens_mes"]
+    compras_mes = r["compras_mes"]
+    est = estat["cliente"]
+    sem_cat_pct = cat["pct_itens"].get("Sem Categoria", 0.0)
+    ids_txt = ", ".join(c["ids_sem_categoria"]) or "nenhum"
+    ano = r["ano"]
+    ano_pico = int(ano["itens"].idxmax())
+    mes_max, mes_min = mes.idxmax(), mes.idxmin()
+    # Meses com volume anormal: menos de 25% da mediana mensal de compras. O primeiro e o
+    # último mês ficam de fora da regra porque a coleta pode ter começado/terminado no meio deles.
+    compras_por_mes = df.groupby("ANO_MES")["CO_ID"].nunique()
+    mediana_mes = float(compras_por_mes.median())
+    interior = compras_por_mes.iloc[1:-1]
+    meses_baixos = interior[interior < 0.25 * mediana_mes]
+    lista_baixos = ", ".join(f"{m[5:]}/{m[:4]} ({n} compras)" for m, n in meses_baixos.items()) or "nenhum"
+    ultimo_mes = compras_por_mes.index[-1]
+    explicacao = "; é indício de falha de coleta, e não de queda real de vendas" if len(meses_baixos) else ""
+    ex_nome = r["por_nome"]["ids_distintos"].idxmax()
+    ex_ids = int(r["por_nome"].loc[ex_nome, "ids_distintos"])
+    lider_genero = gen["pct_itens"].idxmax()
+    dist = estat["distribuicao"]
+    pct_sem_filhos = dist["pct"].get(0, 0.0)
+    n_ids = df.loc[df["PR_NOME"] != "Sem Nome", "PR_ID"].nunique()
+    n_nomes = df.loc[df["PR_NOME"] != "Sem Nome", "PR_NOME"].nunique()
+
+    titulo("CONCLUSÕES (principais insights e problemas remanescentes)")
+    conclusoes = [
+        f"1) Alimentos dominam: {cat.index[0]} é {br(cat.iloc[0]['pct_itens'], 1)}% dos itens e está em "
+        f"{br(cat.iloc[0]['penetracao_compras'], 1)}% das compras; {str(cat.index[1]).lower()} e "
+        f"{str(cat.index[2]).lower()} vêm a seguir ({br(cat.iloc[1]['pct_itens'], 1)}% e "
+        f"{br(cat.iloc[2]['pct_itens'], 1)}%). As {len(cat)} categorias "
+        f"incluem 'Sem Categoria' ({br(sem_cat_pct, 2)}% dos itens; PR_ID: {ids_txt}).",
+        f"2) Gênero: clientes do gênero {lider_genero} respondem por {br(gen['pct_itens'].max(), 1)}% dos itens "
+        f"({int(gen.loc[lider_genero, 'clientes'])} dos {clientes_uni} clientes). O tamanho médio da compra "
+        f"é praticamente igual ({br(gen['itens_por_compra'].min(), 1)} x {br(gen['itens_por_compra'].max(), 1)} itens) "
+        f"e o mix de categorias difere no máximo {br(r['mix_dif_max'], 2)} ponto percentual entre os gêneros: "
+        f"a diferença de volume vem do número de clientes de cada gênero, não de comprarem diferente.",
+        f"3) Tempo: {ano_pico} foi o ano de maior volume ({br(int(ano.loc[ano_pico, 'itens']))} itens) e o "
+        f"mês de pico foi {mes_max[5:]}/{mes_max[:4]} ({br(int(mes.max()))} itens). Meses com volume anormalmente "
+        f"baixo (menos de 25% da mediana mensal de {br(mediana_mes)} compras): {lista_baixos}{explicacao}. "
+        f"O último mês ({ultimo_mes[5:]}/{ultimo_mes[:4]}) é parcial: os dados terminam em {df['DATA'].max():%d/%m/%Y}.",
+        f"4) Número de filhos (por cliente): média {br(est['média'], 2)}, mediana {br(est['mediana'], 0)}, "
+        f"moda {', '.join(str(m) for m in est['moda'])}, desvio padrão {br(est['desvio padrão'], 2)}, "
+        f"mínimo {est['mínimo']} e máximo {est['máximo']}; Q1={br(est['q1 (25%)'], 0)}, "
+        f"Q3={br(est['q3 (75%)'], 0)}. {br(pct_sem_filhos, 1)}% dos clientes não têm filhos "
+        f"(média > mediana: distribuição assimétrica à direita).",
+        f"5) Filhos não explicam o comportamento de compra: {br(r['pct_infantis_sem_filhos'], 1)}% dos itens "
+        f"infantis (fralda, chupeta etc.) são comprados por clientes SEM filhos, quase exatamente a "
+        f"fração de clientes sem filhos ({br(r['pct_clientes_sem_filhos'], 1)}%). Os itens por compra variam só de "
+        f"{br(r['ipc_filhos'][0], 1)} a {br(r['ipc_filhos'][1], 1)} entre os grupos de filhos e os 10% maiores "
+        f"clientes respondem por {br(r['top10_pct'], 1)}% dos itens. Essa uniformidade sugere base sintética "
+        f"ou sorteada, o que limita conclusões de negócio (é uma hipótese, não uma prova).",
+        f"6) Problemas remanescentes: (a) sem preço/quantidade, 'vendas' é só volume de itens e QTD "
+        f"depende da hipótese de que linha repetida = unidade extra; (b) {n_ids} PR_ID com nome para {n_nomes} nomes distintos "
+        f"(ex.: {ex_nome} tem {ex_ids} IDs), então ranking por nome mistura SKUs; (c) CL_EC não tem "
+        f"legenda; (d) PR_ID sem categoria/nome: {ids_txt}; (e) meses com volume anormalmente baixo: {lista_baixos}.",
+    ]
+    for texto in conclusoes:
+        imprimir(texto)
+        imprimir()
+
+
+# ----------------------------------------------------------------------------
 # EXECUÇÃO
 # ----------------------------------------------------------------------------
 def main():
@@ -532,6 +769,9 @@ def main():
     diagnostico(df_bruto, extras)
     df, contadores = limpar_base(df_bruto, extras)
     estat = estatisticas_filhos(df)
+    resultados = agrupamentos(df)
+    gerar_graficos(df, estat)
+    relatorio_final(df, contadores, estat, resultados)
     imprimir("\nFim da execução.")
 
 
