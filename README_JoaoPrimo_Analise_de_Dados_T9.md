@@ -12,7 +12,6 @@ Opção B: Google Colab
 
 1. Abra <https://colab.research.google.com>, crie um notebook e, no painel de arquivos (ícone de pasta), envie `analise_varejo.py` e `dados/Base_Varejo.zip` (os dois na mesma pasta).
 2. Em uma célula, rode:
-   
    !pip install -q pandas matplotlib
    !python analise_varejo.py
    
