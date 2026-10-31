@@ -184,6 +184,89 @@ def etapa_importacao():
 
 
 # ----------------------------------------------------------------------------
+# SPRINT 2 - FUNÇÕES DE LIMPEZA (TEXTO, INTEIRO, DECIMAL, DATETIME)
+# ----------------------------------------------------------------------------
+# Textos que, na prática, significam "valor vazio". "#N/D" é o erro de PROCV do Excel
+# e aparece de verdade nas colunas PR_CAT e PR_NOME desta base.
+TOKENS_NULOS = {"", "NULL", "NONE", "NAN", "N/A", "NA", "#N/D", "#N/A", "#VALOR!", "#REF!", "-"}
+
+
+def limpar_texto(valor):
+    """Padroniza texto: remove acentos, espaços repetidos/pontas e usa MAIÚSCULAS."""
+    if valor is None:
+        return ""
+    texto = unicodedata.normalize("NFKD", str(valor))
+    texto = texto.encode("ascii", "ignore").decode("ascii")  # tira acentos (ex.: LIMAO)
+    texto = re.sub(r"\s+", " ", texto)                        # vários espaços -> um
+    return texto.strip().upper()
+
+
+def eh_nulo(valor):
+    """True se o valor, depois de padronizado, for um dos marcadores de vazio."""
+    return limpar_texto(valor) in TOKENS_NULOS
+
+
+def limpar_inteiro(valor):
+    """Converte texto em int. Devolve None se for vazio ou não numérico."""
+    texto = limpar_texto(valor)
+    if texto in TOKENS_NULOS:
+        return None
+    texto = re.sub(r"[^\d-]", "", texto)  # mantém só dígitos e sinal
+    if not re.fullmatch(r"-?\d+", texto):
+        return None
+    return int(texto)
+
+
+def limpar_decimal(valor):
+    """Converte texto em float, aceitando formato brasileiro (R$ 1.234,56)."""
+    texto = limpar_texto(valor)
+    if texto in TOKENS_NULOS:
+        return None
+    texto = re.sub(r"[^\d,.\-]", "", texto)  # remove R$, espaços etc.
+    if "," in texto:                          # 1.234,56 -> 1234.56
+        texto = texto.replace(".", "").replace(",", ".")
+    try:
+        return float(texto)
+    except ValueError:
+        return None
+
+
+def converter_data(valor):
+    """Converte 'dd/mm/aaaa' em datetime (módulo datetime). Data inválida -> None."""
+    try:
+        return datetime.strptime(limpar_texto(valor), "%d/%m/%Y")
+    except ValueError:
+        return None
+
+
+def aplicar_por_unicos(serie, funcao):
+    """
+    Aplica a função só nos valores DISTINTOS e depois espalha o resultado.
+    A base tem 830 mil linhas mas poucos valores distintos por coluna; isso torna a
+    limpeza muito mais rápida do que chamar a função linha a linha.
+    """
+    mapa = {valor: funcao(valor) for valor in serie.unique()}
+    return serie.map(mapa)
+
+
+def demonstrar_funcoes():
+    """Mostra as funções de limpeza em ação com exemplos simples."""
+    titulo("SPRINT 2 - FUNÇÕES DE LIMPEZA (demonstração)")
+    exemplos = [
+        ("limpar_texto('  refrigerante   limaO ')", limpar_texto("  refrigerante   limaO ")),
+        ("limpar_texto('Limão')", limpar_texto("Limão")),
+        ("eh_nulo('#N/D')", eh_nulo("#N/D")),
+        ("limpar_inteiro(' 1.234 ')", limpar_inteiro(" 1.234 ")),
+        ("limpar_inteiro('abc')", limpar_inteiro("abc")),
+        ("limpar_decimal('R$ 1.234,56')", limpar_decimal("R$ 1.234,56")),
+        ("converter_data('19/08/2022')", converter_data("19/08/2022")),
+        ("converter_data('31/02/2022')", converter_data("31/02/2022")),
+    ]
+    for chamada, resultado in exemplos:
+        imprimir(f"  {chamada:<40} -> {resultado!r}")
+
+
+# ----------------------------------------------------------------------------
 # EXECUÇÃO
 # ----------------------------------------------------------------------------
 def main():
@@ -192,6 +275,7 @@ def main():
     PASTA_SAIDA.mkdir(exist_ok=True)
 
     df_bruto, cabecalho, extras = etapa_importacao()
+    demonstrar_funcoes()
     imprimir("\nFim da execução.")
 
 
