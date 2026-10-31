@@ -757,6 +757,30 @@ def relatorio_final(df, c, estat, r):
 
 
 # ----------------------------------------------------------------------------
+# SPRINT 6 - SAÍDAS PARA O VERSIONAMENTO (df_limpo.csv + relatório)
+# ----------------------------------------------------------------------------
+def salvar_saidas(df):
+    """Grava o df limpo (CSV com ';' e BOM, abre direto no Excel BR) e o relatório do terminal."""
+    titulo("SPRINT 6 - SAÍDAS GRAVADAS")
+    PASTA_SAIDA.mkdir(exist_ok=True)
+    caminho_csv = PASTA_SAIDA / "df_limpo.csv"
+    # ANO, MES e ANO_MES são recalculáveis a partir de DATA; ficam fora do arquivo para ele
+    # ficar bem abaixo do limite de 50 MB que o GitHub recomenda por arquivo.
+    df_saida = df.drop(columns=["ANO", "MES", "ANO_MES"])
+    df_saida.to_csv(caminho_csv, sep=";", index=False, encoding="utf-8-sig", date_format="%Y-%m-%d")
+
+    conferencia = pd.read_csv(caminho_csv, sep=";", encoding="utf-8-sig")  # lê de volta para validar
+    assert conferencia.shape == df_saida.shape, "o arquivo gravado não bate com o df em memória"
+    tamanho_mb = caminho_csv.stat().st_size / 1024 / 1024
+    imprimir(f"df_limpo.csv gravado e conferido: {br(len(df_saida))} linhas x {df_saida.shape[1]} colunas "
+             f"({br(tamanho_mb, 1)} MB) em {caminho_csv}")
+
+    caminho_txt = PASTA_SAIDA / "relatorio_terminal.txt"
+    imprimir(f"Relatório do terminal gravado em {caminho_txt}")
+    caminho_txt.write_text("\n".join(LINHAS_RELATORIO), encoding="utf-8")
+
+
+# ----------------------------------------------------------------------------
 # EXECUÇÃO
 # ----------------------------------------------------------------------------
 def main():
@@ -772,6 +796,7 @@ def main():
     resultados = agrupamentos(df)
     gerar_graficos(df, estat)
     relatorio_final(df, contadores, estat, resultados)
+    salvar_saidas(df)
     imprimir("\nFim da execução.")
 
 
