@@ -16,7 +16,6 @@ Opção B: Google Colab
    !pip install -q pandas matplotlib
    !python analise_varejo.py
    
-
 3-O que acontece
 
 - O relatório completo aparece no terminal (leva uns 25 segundos e usa cerca de 1 GB de memória).
