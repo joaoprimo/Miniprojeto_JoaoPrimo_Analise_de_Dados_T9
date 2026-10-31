@@ -462,6 +462,64 @@ def limpar_base(df_bruto, extras):
 
 
 # ----------------------------------------------------------------------------
+# SPRINT 4 - ESTATÍSTICA DESCRITIVA: NÚMERO DE FILHOS (CL_FHL)
+# ----------------------------------------------------------------------------
+def resumo_estatistico(serie):
+    """Calcula todos os parâmetros pedidos para uma série numérica."""
+    quartis = serie.quantile([0.25, 0.50, 0.75])
+    moda = serie.mode().tolist()  # pode haver mais de uma moda
+    return {
+        "contagem": int(serie.count()),
+        "média": float(serie.mean()),
+        "mediana": float(serie.median()),
+        "desvio padrão": float(serie.std()),
+        "moda": moda,
+        "mínimo": int(serie.min()),
+        "q1 (25%)": float(quartis[0.25]),
+        "q2 (50%)": float(quartis[0.50]),
+        "q3 (75%)": float(quartis[0.75]),
+        "máximo": int(serie.max()),
+    }
+
+
+def estatisticas_filhos(df):
+    """Sprint 4: estatísticas da coluna de número de filhos, por cliente e por compra."""
+    titulo("SPRINT 4 - ESTATÍSTICA DESCRITIVA: NÚMERO DE FILHOS DO CLIENTE (CL_FHL)")
+    # Número de filhos é atributo do CLIENTE. Se usássemos as linhas da base, quem compra mais
+    # pesaria mais. Por isso a visão principal usa 1 linha por cliente; a visão por compra
+    # (1 linha por CO_ID) fica ao lado só para comparação.
+    visoes = {
+        "POR CLIENTE (1 linha por CL_ID) - visão principal": df.drop_duplicates("CL_ID")["CL_FHL"],
+        "POR COMPRA (1 linha por CO_ID) - comparação": df.drop_duplicates("CO_ID")["CL_FHL"],
+    }
+    resultado = {}
+    for nome, serie in visoes.items():
+        stats = resumo_estatistico(serie)
+        descr = serie.describe()  # conferência cruzada com o describe() do pandas
+        assert abs(descr["mean"] - stats["média"]) < 1e-9 and abs(descr["50%"] - stats["mediana"]) < 1e-9
+        imprimir(f"\n{nome}")
+        for rotulo, valor in stats.items():
+            if rotulo == "moda":
+                texto = ", ".join(str(m) for m in valor)
+            elif isinstance(valor, float):
+                texto = br(valor, 3)
+            else:
+                texto = br(valor)
+            imprimir(f"  {rotulo:<15} {texto:>10}")
+        resultado[nome] = stats
+    imprimir("\n(conferido com Series.describe() do pandas: média e mediana batem)")
+
+    clientes = visoes["POR CLIENTE (1 linha por CL_ID) - visão principal"]
+    distribuicao = clientes.value_counts().sort_index().to_frame("clientes")
+    distribuicao["pct"] = distribuicao["clientes"] / distribuicao["clientes"].sum() * 100
+    imprimir("\nDistribuição de clientes por número de filhos:")
+    imprimir(fmt_df(distribuicao))
+    return {"cliente": resultado["POR CLIENTE (1 linha por CL_ID) - visão principal"],
+            "compra": resultado["POR COMPRA (1 linha por CO_ID) - comparação"],
+            "distribuicao": distribuicao}
+
+
+# ----------------------------------------------------------------------------
 # EXECUÇÃO
 # ----------------------------------------------------------------------------
 def main():
@@ -473,6 +531,7 @@ def main():
     demonstrar_funcoes()
     diagnostico(df_bruto, extras)
     df, contadores = limpar_base(df_bruto, extras)
+    estat = estatisticas_filhos(df)
     imprimir("\nFim da execução.")
 
 
