@@ -1,23 +1,23 @@
-# Como executar: Miniprojeto_JoaoPrimo_Analise_de_Dados_T9
+Como executar: Miniprojeto_JoaoPrimo_Analise_de_Dados_T9
 
 Projeto de análise exploratória da base Varejo (Kaggle). O script é o `analise_varejo.py`.
 
-## Opção A: VS Code (ou terminal)
+Opção A: VS Code (ou terminal)
 
 1. A base já está em `dados/Base_Varejo.zip` (não precisa descompactar). Fonte: <https://www.kaggle.com/datasets/namespaiva/base-varejo/data>
 2. Instale as bibliotecas: `pip install -r requirements.txt`
 3. Rode: `python analise_varejo.py`
 
-## Opção B: Google Colab
+Opção B: Google Colab
 
 1. Abra <https://colab.research.google.com>, crie um notebook e, no painel de arquivos (ícone de pasta), envie `analise_varejo.py` e `dados/Base_Varejo.zip` (os dois na mesma pasta).
 2. Em uma célula, rode:
-   ```
+   
    !pip install -q pandas matplotlib
    !python analise_varejo.py
-   ```
+   
 
-## O que acontece
+3-O que acontece
 
 - O relatório completo aparece no terminal (leva uns 25 segundos e usa cerca de 1 GB de memória).
 - Os arquivos gerados ficam em `saida/`: `df_limpo.csv`, `relatorio_terminal.txt` e 3 gráficos `.png`.
