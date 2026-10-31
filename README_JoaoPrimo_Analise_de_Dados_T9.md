@@ -4,13 +4,13 @@ Projeto de análise exploratória da base Varejo (Kaggle). O script é o `analis
 
 ## Opção A: VS Code (ou terminal)
 
-1. Baixe a base em <https://www.kaggle.com/datasets/namespaiva/base-varejo/data> e coloque o arquivo na pasta `dados/` (pode ser o `.zip` do Kaggle, não precisa descompactar).
+1. A base já está em `dados/Base_Varejo.zip` (não precisa descompactar). Fonte: <https://www.kaggle.com/datasets/namespaiva/base-varejo/data>
 2. Instale as bibliotecas: `pip install -r requirements.txt`
 3. Rode: `python analise_varejo.py`
 
 ## Opção B: Google Colab
 
-1. Abra <https://colab.research.google.com>, crie um notebook e, no painel de arquivos (ícone de pasta), envie `analise_varejo.py` e a base do Kaggle.
+1. Abra <https://colab.research.google.com>, crie um notebook e, no painel de arquivos (ícone de pasta), envie `analise_varejo.py` e `dados/Base_Varejo.zip` (os dois na mesma pasta).
 2. Em uma célula, rode:
    ```
    !pip install -q pandas matplotlib

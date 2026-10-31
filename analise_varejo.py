@@ -10,7 +10,7 @@ Como executar (VS Code):   python analise_varejo.py
 Como executar (Colab):     envie o script e a base, depois:  !python analise_varejo.py
 Requisitos:                pandas (obrigatório) e matplotlib (opcional, só para os gráficos)
 
-A base (Base Varejo.csv, Base_Varejo.csv ou Varejo.csv) pode estar na pasta do script,
+A base (Base_Varejo.zip, Base Varejo.csv, Base_Varejo.csv ou Varejo.csv) pode estar na pasta do script,
 em ./dados/ ou na pasta atual. Se o arquivo for o .zip baixado do Kaggle (mesmo com
 extensão .csv), o script abre o zip sozinho.
 
@@ -57,7 +57,10 @@ except NameError:  # ocorre se o código for colado em uma célula do Colab
     PASTA_PROJETO = Path.cwd()
 
 PASTA_SAIDA = PASTA_PROJETO / "saida"
-NOMES_ARQUIVO = ["Base Varejo.csv", "Base_Varejo.csv", "Base_varejo.csv", "Varejo.csv"]
+NOMES_ARQUIVO = [
+    "Base_Varejo.zip", "Base Varejo.zip", "Varejo.zip",
+    "Base Varejo.csv", "Base_Varejo.csv", "Base_varejo.csv", "Varejo.csv",
+]
 COLUNAS = [
     "DATA", "CO_ID", "CL_ID", "CL_GENERO", "CL_EC",
     "CL_FHL", "CL_SEG", "PR_ID", "PR_CAT", "PR_NOME",
@@ -113,9 +116,9 @@ def localizar_base():
             caminho = pasta / nome
             if caminho.is_file():
                 return caminho
-    for pasta in pastas:  # 2o: qualquer csv que tenha "varejo" no nome
+    for pasta in pastas:  # 2o: qualquer csv ou zip que tenha "varejo" no nome
         if pasta.is_dir():
-            for caminho in sorted(pasta.glob("*.csv")):
+            for caminho in sorted(list(pasta.glob("*.csv")) + list(pasta.glob("*.zip"))):
                 if "arejo" in caminho.name.lower():
                     return caminho
     raise FileNotFoundError(

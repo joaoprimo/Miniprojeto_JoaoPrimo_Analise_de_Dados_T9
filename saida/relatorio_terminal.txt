@@ -2,8 +2,8 @@
 ==============================================================================
 SPRINT 1 - IMPORTAÇÃO DA BASE (csv.DictReader -> pandas)
 ==============================================================================
-Arquivo da base: dados/Base_Varejo.csv
-Aviso: 'Base_Varejo.csv' é um .zip; lendo 'Base Varejo.csv' de dentro dele.
+Arquivo da base: dados/Base_Varejo.zip
+Aviso: 'Base_Varejo.zip' é um .zip; lendo 'Base Varejo.csv' de dentro dele.
 Número de registros (linhas): 830.000
 Colunas no arquivo: 14 (10 com nome + 4 sem nome)
 Colunas carregadas: DATA, CO_ID, CL_ID, CL_GENERO, CL_EC, CL_FHL, CL_SEG, PR_ID, PR_CAT, PR_NOME

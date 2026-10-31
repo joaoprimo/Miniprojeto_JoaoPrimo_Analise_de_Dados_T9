@@ -120,7 +120,8 @@ Miniprojeto_JoaoPrimo_Analise_de_Dados_T9/
 ├── requirements.txt
 ├── .gitignore
 ├── dados/
-│   └── LEIA-ME.md                             # onde colocar a base do Kaggle
+│   ├── Base_Varejo.zip                        # base original do Kaggle (3,9 MB)
+│   └── LEIA-ME.md
 └── saida/
     ├── df_limpo.csv                           # base limpa (733.447 x 11)
     ├── relatorio_terminal.txt                 # relatório completo gerado pelo script

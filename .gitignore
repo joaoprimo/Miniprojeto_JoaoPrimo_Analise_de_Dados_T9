@@ -1,6 +1,4 @@
-# Base original do Kaggle (~49 MB descompactada; cada pessoa baixa a sua).
-dados/*.csv
-dados/*.zip
+# A base (dados/Base_Varejo.zip, 3,9 MB) está versionada de propósito, para o projeto rodar sem downloads.
 
 # Python
 __pycache__/
